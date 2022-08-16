@@ -13,11 +13,16 @@ enum ForceBomb {
 }
 
 enum SequenceType: CaseIterable {
-    case oneNoBomb, one, twoWithOneBomb, two, three, four, chain, fastChain
+    case oneNoBomb, one, twoWithOneBomb, two, three, four, chain, fastChain, bonusEnemy
 }
 	
 class GameScene: SKScene {
     var bombSoundEffect: AVAudioPlayer?
+    
+    var quarterOfWidth : CGFloat = 256
+    var enemyRadius : CGFloat = 64
+    
+    var fusePosition = CGPoint(x: 76, y: 64)
     
     var popupTime = 0.9
     var sequencePosition = 0
@@ -115,10 +120,16 @@ class GameScene: SKScene {
         let nodesAtPoint = nodes(at: location)
         
         for case let node as SKSpriteNode in nodesAtPoint {
-            if node.name == "enemy" {
+            if node.name == "enemy" || node.name == "bonus" {
                 if let emitter = SKEmitterNode(fileNamed: "sliceHitEnemy") {
                     emitter.position = node.position
                     addChild(emitter)
+                }
+                
+                if node.name == "enemy" {
+                    score += 1
+                } else {
+                    score += 5
                 }
                 
                 node.name = ""
@@ -130,7 +141,7 @@ class GameScene: SKScene {
                 let sequence = SKAction.sequence([group, .removeFromParent()])
                 node.run(sequence)
                 
-                score += 1
+
                 
                 if let index = activeEnemies.firstIndex(of: node) {
                     activeEnemies.remove(at: index)
@@ -239,7 +250,7 @@ class GameScene: SKScene {
     
     func createEnemy(forceBomb: ForceBomb = .random) {
         let enemy: SKSpriteNode
-        var enemyType = Int.random(in: 0...6)
+        var enemyType = Int.random(in: 0...7)
         
         if forceBomb == .never {
             enemyType = 1
@@ -269,9 +280,13 @@ class GameScene: SKScene {
             }
             
             if let emitter = SKEmitterNode(fileNamed: "sliceFuse") {
-                emitter.position = CGPoint(x: 76, y: 64)
+                emitter.position = fusePosition
                 enemy.addChild(emitter)
             }
+        } else if enemyType == 7 {
+            enemy = SKSpriteNode(imageNamed: "randomDog")
+            run(SKAction.playSoundFileNamed("launch.caf", waitForCompletion: false))
+            enemy.name = "bonus"
         } else {
             enemy = SKSpriteNode(imageNamed: "penguin")
             run(SKAction.playSoundFileNamed("launch.caf", waitForCompletion: false))
@@ -283,7 +298,7 @@ class GameScene: SKScene {
         
         enemy.position = randomPosition
         
-        if randomPosition.x < 256 {
+        if randomPosition.x < quarterOfWidth {
             randomXVelocity = Int.random(in: 8...15)
         } else if randomPosition.x < 512 {
             randomXVelocity = Int.random(in: 3...5)
@@ -293,14 +308,22 @@ class GameScene: SKScene {
             randomXVelocity = Int.random(in: 8...15)
         }
         
-        enemy.physicsBody = SKPhysicsBody(circleOfRadius: 64)
-        enemy.physicsBody?.velocity = CGVector(dx: randomXVelocity * 40, dy: Int.random(in: 24...32) * 40)
+        enemy.physicsBody = SKPhysicsBody(circleOfRadius: enemyRadius)
+        
+        if enemyType != 7 {
+            enemy.physicsBody?.velocity = CGVector(dx: randomXVelocity * 40, dy: Int.random(in: 24...32) * 40)
+            
+        } else {
+            enemy.physicsBody?.velocity = CGVector(dx: randomXVelocity * 40, dy: Int.random(in: 24...32) * 40)
+            //enemy.physicsBody?.velocity = CGVector(dx: randomXVelocity * 60, dy: Int.random(in: 40...50) * 40)
+            enemy.scale(to: SKSpriteNode(imageNamed: "penguin").size)
+        }
+        
         enemy.physicsBody?.angularVelocity = CGFloat.random(in: -3...3)
         enemy.physicsBody?.collisionBitMask = 0
         
         addChild(enemy)
         activeEnemies.append(enemy)
-        
     }
     
     func substractLife() {
@@ -335,6 +358,8 @@ class GameScene: SKScene {
                         node.name = ""
                         substractLife()
                     } else if node.name == "bomb" {
+                        node.name = ""
+                    } else if node.name == "bonus" {
                         node.name = ""
                     }
                     
@@ -403,7 +428,10 @@ class GameScene: SKScene {
             for multiplier in 1...4 {
                 DispatchQueue.main.asyncAfter(deadline: .now() + (chainDelay / 10.0) * Double(multiplier)) { [weak self] in self?.createEnemy() }
             }
+        case .bonusEnemy:
+            createEnemy()
         }
+    
         
         sequencePosition += 1
         nextSequenceQueued.toggle()
