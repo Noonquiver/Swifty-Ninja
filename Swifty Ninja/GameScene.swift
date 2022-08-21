@@ -177,7 +177,7 @@ class GameScene: SKScene {
     
     func endGame(triggeredByBomb: Bool) {
         guard isGameEnded == false else { return }
-        
+                
         isGameEnded = true
         physicsWorld.speed = 0
         isUserInteractionEnabled.toggle()
@@ -190,6 +190,10 @@ class GameScene: SKScene {
                 livesImages[index].texture = SKTexture(imageNamed: "sliceLifeGone")
             }
         }
+        
+        let gameOver = SKSpriteNode(imageNamed: "gameOver")
+        gameOver.position = CGPoint(x: 512, y: 384)
+        addChild(gameOver)
     }
     
     func playSwooshSound() {
@@ -315,7 +319,6 @@ class GameScene: SKScene {
             
         } else {
             enemy.physicsBody?.velocity = CGVector(dx: randomXVelocity * 40, dy: Int.random(in: 24...32) * 40)
-            //enemy.physicsBody?.velocity = CGVector(dx: randomXVelocity * 60, dy: Int.random(in: 40...50) * 40)
             enemy.scale(to: SKSpriteNode(imageNamed: "penguin").size)
         }
         
@@ -342,7 +345,7 @@ class GameScene: SKScene {
             endGame(triggeredByBomb: false)
         }
         
-        life.texture = SKTexture(imageNamed: "sliceLiveGone")
+        life.texture = SKTexture(imageNamed: "sliceLifeGone")
         life.xScale = 1.3
         life.yScale = 1.3
         life.run(SKAction.scale(by: 1, duration: 0.1))
